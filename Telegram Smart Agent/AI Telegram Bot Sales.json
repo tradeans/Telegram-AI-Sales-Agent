@@ -1,0 +1,776 @@
+{
+  "name": "AI Telegram Bot Sales",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "32ba10ac-a6b1-432b-bde2-aac6bd1b592c",
+      "name": "Telegram Trigger",
+      "webhookId": "d714e627-71b5-48b4-85df-38a0341c6436",
+      "credentials": {
+        "telegramApi": {
+          "id": "5vlXN3tM4frwn6Eg",
+          "name": "smart sales agent bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nfor (const item of $input.all()) {\n  const msg = item.json;\n  const text = msg.message?.text || '';\n  const chatId = msg.message?.chat?.id;\n  const userId = msg.message?.from?.id;\n  const userName = msg.message?.from?.first_name || 'Customer';\n  \n  results.push({\n    json: {\n      chatId,\n      userId,\n      userName,\n      text,\n      messageId: msg.message?.message_id,\n      timestamp: new Date().toISOString()\n    }\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "c5513c1d-578e-4586-8e4f-2da8a3aa6966",
+      "name": "Parse Message"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblvtjl8gHrVeryf7",
+          "mode": "list",
+          "cachedResultName": "Chat_Sessions",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tblvtjl8gHrVeryf7"
+        },
+        "filterByFormula": "=AND({chat_id} = '{{ $json.chatId }}', {human_mode} = 1)",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "d3f0e718-10f4-4498-94b2-5a9c41428515",
+      "name": "Check Human Mode",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5ab63666-0d46-434d-9f04-1f565b03f871",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        0
+      ],
+      "id": "93462b2d-b425-4d17-a003-84860e87b36f",
+      "name": "If Human Mode"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        224
+      ],
+      "id": "5b11a223-5182-44d2-b64d-bf83f27921a9",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "wtg8ft55EXZq35N7",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.chatId.toString() }}",
+        "contextWindowLength": 300
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        928,
+        400
+      ],
+      "id": "60cddf36-3f06-4733-983f-a103c5d301dd",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=user message:{{ $json.text }}\nchat_Id: {{ $json.chatId }}\ncustomer name: {{ $('Telegram Trigger').item.json.message.from.first_name }} {{ $('Telegram Trigger').item.json.message.from.last_name }}",
+        "options": {
+          "systemMessage": "=You are a friendly, professional Sales Assistant for an online store.\nYour goal is to help customers find products, check availability, and create orders with accuracy and care.\n\n## 🎯 METHODOLOGY\nFollow this decision process for every user message:\n\n1. **Analyze Intent:** Determine if the user is asking about products, placing an order, requesting help, or escalating.\n2. **Tool Selection:** Choose the appropriate tool based on intent. Never guess product data.\n3. **Verification:** Always check stock before confirming orders. Confirm all details with the user before creating an order.\n4. **Response:** Reply concisely with verified information. End with a clear call-to-action.\n5. **Escalation:** If the user requests a human, is frustrated, or the request is unclear, escalate immediately.\n\n## 📝 STEP-BY-STEP PROCESSES\n\n### 🔍 Product Inquiry\n1. Call `lookup_product(product_name)` to search for the product.\n2. If found, call `check_stock(product_id)` to verify availability.\n3. Reply with product details, price, and stock status.\n4. Ask: \"Would you like to order this?\"\n\n### 🛒 Order Placement\n1. When the user wants to order, confirm all details:\n   - Product name\n   - Quantity\n   - Total amount (price × quantity)\n2. Ask for explicit confirmation: \"Please confirm: 2× Mechanical Keyboard = ₱3,600. Proceed?\"\n3. Only after user confirms, call `create_order(product_id, quantity, customer_name, chat_id)`.\n4. Reply with order confirmation and order ID.\n\n### 🚨 Human Handoff\n1. If the user asks for a human, is frustrated, or the request is unclear/complaint:\n   - Call `human_handoff(reason, chat_id)`.\n   - Reply: \"A human agent has been notified and will reply shortly. 🤝\"\n2. Do not continue AI conversation after handoff.\n\n## 🛡️ GUARDRAILS\n1. **Truthfulness:** Only discuss products returned by `lookup_product`. Never invent products, prices, or features.\n2. **Stock Checks:** Always verify stock via `check_stock` before confirming an order. If out of stock, apologize and suggest alternatives.\n3. **No Promises:** Never promise delivery times, discounts, or refunds unless explicitly stated in product data.\n4. **Order Confirmation:** ALWAYS confirm product, quantity, and total with the user before calling `create_order`.\n5. **Tone:** Friendly but professional. Use emojis sparingly. 🛍️\n6. **Language:** Reply in the same language as the user.\n7. **Safety:** If the user provides sensitive information (e.g., credit card), advise them not to share it and escalate to human.\n8. **Currency:** Always use the Philippine Peso symbol (₱) for all prices, totals, and monetary values. Never use dollar signs ($).\n\n## 🛠️ TOOL USAGE POLICY\n- `lookup_product(product_name)`: Use to search for products by name or keyword. Returns product_id, name, price, description.\n- `check_stock(product_id)`: Use to verify stock level. Requires product_id from lookup.\n- `create_order(product_id, quantity, customer_name, chat_id)`: Use ONLY after user confirms order details. Requires all fields.\n- `human_handoff(reason, chat_id)`: Use to escalate to human agent. Always include chat_id.\n\n## 💬 RESPONSE STYLE\n- Keep replies concise and helpful.\n- Use bullet points for product details.\n- End with a clear call-to-action (e.g., \"Would you like to order this?\").\n- If multiple products match, list them and ask the user to choose.\n- Never reveal internal tool names or processes to the user.\n\n## 📚 EXAMPLES\n\n### Example 1: Product Inquiry\n**User:** \"How much is the mechanical keyboard?\"\n**Bot:** Calls `lookup_product(\"mechanical keyboard\")` → Calls `check_stock(\"rec...\")`\n**Reply:** \n\"Here are the details for the Mechanical Keyboard:\n• Price: ₱1,800\n• Description: RGB backlit with blue switches\n• Stock: 2 units available ✅\n\nWould you like to order this?\"\n\n### Example 2: Order Confirmation\n**User:** \"I want to order 2 keyboards.\"\n**Bot:** \n\"Please confirm your order:\n• Product: Mechanical Keyboard\n• Quantity: 2\n• Total: ₱3,600\n\nWould you like to proceed with this order?\"\n**User:** \"Yes, confirm.\"\n**Bot:** Calls `create_order(\"rec...\", 2, \"Kevyn\", \"5233070577\")`\n**Reply:** \n\"✅ Order confirmed!\nOrder ID: ORD-1746623456\nTotal: ₱3,600\n\nYour order is pending approval. We'll notify you once it's processed. 📦\"\n\n### Example 3: Out of Stock\n**User:** \"Do you have the Smart Watch?\"\n**Bot:** Calls `lookup_product(\"Smart Watch\")` → Calls `check_stock(\"rec...\")`\n**Reply:** \n\"❌ The Smart Watch is currently out of stock.\n\nWe expect restock next week. Would you like me to notify you when it's available, or would you prefer to see other products?\"\n\n### Example 4: Human Handoff\n**User:** \"Talk to a human.\"\n**Bot:** Calls `human_handoff(\"User requested human\", \"5233070577\")`\n**Reply:** \n\"A human agent has been notified and will reply shortly. 🤝\n\nIs there anything else I can help you with while you wait?\"\n\n### Example 5: Invalid Product\n**User:** \"Do you sell refrigerators?\"\n**Bot:** Calls `lookup_product(\"refrigerator\")` → Returns empty\n**Reply:** \n\"I couldn't find any refrigerators in our catalog. 🤔\n\nWe currently offer electronics and accessories. Would you like to see our available products?\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        976,
+        96
+      ],
+      "id": "d5947d39-8c9a-4ab9-bc90-36a6f9717fd4",
+      "name": "AI Sales Agent"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search for products by name or keyword. Returns product_id, name, price, description.",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblczjv7bxwY6rsAf",
+          "mode": "list",
+          "cachedResultName": "Products",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tblczjv7bxwY6rsAf"
+        },
+        "filterByFormula": "=OR(\n  SEARCH(LOWER('{{ $fromAI('product_name', 'Product name or keyword to search', 'string') }}'), LOWER({name})),\n  SEARCH(LOWER('{{ $fromAI('product_name', 'Product name or keyword to search', 'string') }}'), LOWER({keywords}))\n)",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        400
+      ],
+      "id": "303a942a-9102-4ff8-921b-bd0125b03986",
+      "name": "lookup_product",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Check stock availability for a specific product. Requires product_id.",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblczjv7bxwY6rsAf",
+          "mode": "list",
+          "cachedResultName": "Products",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tblczjv7bxwY6rsAf"
+        },
+        "id": "={{ $fromAI('product_id', 'Airtable Record ID of the product', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        320
+      ],
+      "id": "106fb8fa-ba80-45a5-9e3c-961634cc5f2b",
+      "name": "check_stock",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWhxya9O77az8Kr",
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tblWhxya9O77az8Kr"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order_id": "=ORD-{{ Date.now() }}",
+            "customer_name": "={{ $fromAI('customer_name', 'Name of the customer', 'string') }}",
+            "telegram_chat_id": "={{ $fromAI('chat_id', 'Telegram chat ID', 'string') }}",
+            "product_id": "={{ $fromAI('product_id', 'Airtable Record ID of the product', 'string') }}",
+            "quantity": "={{ $fromAI('quantity', 'Number of items to order', 'number') }}",
+            "status": "🟡 Pending Approval",
+            "Product": "={{ [ $fromAI('product_id', 'Airtable Record ID of the product', 'string') ] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "telegram_chat_id",
+              "displayName": "telegram_chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quantity",
+              "displayName": "quantity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "🟡 Pending Approval",
+                  "value": "🟡 Pending Approval"
+                },
+                {
+                  "name": "✅ Approved",
+                  "value": "✅ Approved"
+                },
+                {
+                  "name": "❌ Rejected",
+                  "value": "❌ Rejected"
+                },
+                {
+                  "name": "🚚 Fulfilled",
+                  "value": "🚚 Fulfilled"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "total_amount",
+              "displayName": "total_amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        448
+      ],
+      "id": "5bc95f88-fe36-4bf7-b561-f007a712f2c7",
+      "name": "create_order",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Escalate conversation to human agent. Use when user requests human or is frustrated.",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblvtjl8gHrVeryf7",
+          "mode": "list",
+          "cachedResultName": "Chat_Sessions",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tblvtjl8gHrVeryf7"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "human_mode": true,
+            "chat_id": "={{ $fromAI('chat_id', 'Telegram chat ID', 'string') }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "human_mode",
+              "displayName": "human_mode",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        384
+      ],
+      "id": "08fce36c-8cbc-461e-96e9-3c2847e0714b",
+      "name": "human_handoff",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2a56d926-61c8-42de-81f4-58c7cbdfa257",
+              "name": "chatId",
+              "value": "={{ $('Parse Message').item.json.chatId }}",
+              "type": "string"
+            },
+            {
+              "id": "46db7aa1-7cf7-420f-9df4-aa44313f2b66",
+              "name": "text",
+              "value": "={{ $('Parse Message').item.json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "9e3a6e62-7c93-455e-8e73-17fc10c1a178",
+              "name": "userName",
+              "value": "={{ $('Parse Message').item.json.userName }}",
+              "type": "string"
+            },
+            {
+              "id": "46fd3c6b-014a-461a-8c17-17dfcf442e03",
+              "name": "userId",
+              "value": "={{ $('Parse Message').item.json.userId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        0
+      ],
+      "id": "f58f0f72-bddc-43d4-951a-5eba0f7003e2",
+      "name": "Ensure ChatId"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa394d54-74ab-48ef-994e-3ea85987a3e8",
+              "name": "chatId",
+              "value": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        96
+      ],
+      "id": "07c7050e-14a6-499f-b96d-be6abc8ced80",
+      "name": "Restore ChatId"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $('AI Sales Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        96
+      ],
+      "id": "2a321ece-48d6-4495-b31b-bef93456b8ba",
+      "name": "Reply",
+      "webhookId": "155bbf28-e55e-404c-82fc-30e6509bb62f",
+      "credentials": {
+        "telegramApi": {
+          "id": "5vlXN3tM4frwn6Eg",
+          "name": "smart sales agent bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Message": {
+      "main": [
+        [
+          {
+            "node": "Check Human Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Human Mode": {
+      "main": [
+        [
+          {
+            "node": "Ensure ChatId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Human Mode": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lookup_product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_stock": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "human_handoff": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Sales Agent": {
+      "main": [
+        [
+          {
+            "node": "Restore ChatId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure ChatId": {
+      "main": [
+        [
+          {
+            "node": "If Human Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore ChatId": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "164f17ec-d8bb-487f-a8d3-43864eb4b8c1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "953a1f57a87c292d04865ddcf47377bcf4f3cc4b035326b7099a500d3a353f2b"
+  },
+  "id": "vjCoj2pyWtFBS0fM",
+  "tags": []
+}
