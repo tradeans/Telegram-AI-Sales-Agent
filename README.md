@@ -6,7 +6,7 @@
 ---
 
 ## 🎥 Demo
-[![Watch the Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.loom.com/share/YOUR_LOOM_LINK)
+[![Watch the Demo](https://drive.google.com/file/d/1pv3jkjl67ItTWmULAOEisZxGOuYYowza/view?usp=drive_link)
 > *Click to watch the 3-minute walkthrough of the bot in action.*
 
 ---
@@ -24,7 +24,7 @@
 ---
 
 ## 🏗️ Architecture
-![System Architecture](./assets/architecture.png)
+![System Architecture]
 
 *   **Telegram:** Customer and admin interface with interactive UI.
 *   **n8n:** Workflow orchestration, AI agent logic, and integrations.
