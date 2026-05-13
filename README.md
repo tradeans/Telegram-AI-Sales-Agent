@@ -24,7 +24,6 @@
 ---
 
 ## 🏗️ Architecture
-![System Architecture]
 
 *   **Telegram:** Customer and admin interface with interactive UI.
 *   **n8n:** Workflow orchestration, AI agent logic, and integrations.
