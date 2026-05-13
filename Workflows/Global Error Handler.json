@@ -1,0 +1,416 @@
+{
+  "name": "Global Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "03785038-d10e-4a61-aa94-36b2bfd01e5a",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nfor (const item of $input.all()) {\n  const data = item.json;\n  \n  // Navigate nested structure\n  const executionError = data.execution?.error || {};\n  const workflowInfo = data.workflow || {};\n  \n  const message = executionError.message || 'Unknown error';\n  const nodeName = executionError.node?.name || 'Unknown';\n  const workflowName = workflowInfo.name || 'Unknown Workflow';\n  const executionId = data.execution?.id;\n  \n  // Classify severity\n  const isCritical = message.toLowerCase().includes('credential') || \n                     message.toLowerCase().includes('timeout') ||\n                     message.toLowerCase().includes('rate limit');\n  \n  results.push({\n    json: {\n      workflowName: workflowName,\n      nodeName: nodeName,\n      errorMessage: message,\n      executionId: executionId,\n      severity: isCritical ? 'Critical' : 'Warning',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "85d894a8-77df-4b12-9113-71aa4d163790",
+      "name": "Format & Classify Error"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appjTXRsh3M8VgIhF",
+          "mode": "list",
+          "cachedResultName": "AI Sales Bot",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7CCR8PUXpMBkRQ",
+          "mode": "list",
+          "cachedResultName": "Error_Logs",
+          "cachedResultUrl": "https://airtable.com/appjTXRsh3M8VgIhF/tbl7CCR8PUXpMBkRQ"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "resolved": false,
+            "workflow_name": "={{ $json.workflowName }}",
+            "node_name": "={{ $json.nodeName }}",
+            "error_message": "={{ $json.errorMessage }}",
+            "execution_id": "={{ $json.executionId }}",
+            "severity": "={{ $json.severity }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "node_name",
+              "displayName": "node_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Critical",
+                  "value": "Critical"
+                },
+                {
+                  "name": "Warning",
+                  "value": "Warning"
+                },
+                {
+                  "name": "Info",
+                  "value": "Info"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resolved",
+              "displayName": "resolved",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "3eccc73a-c0f4-472c-b303-1e70b1751ae3",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "sZCcD47rhaVYRpFC",
+          "name": "n8n telegram sales bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b4aee2ac-67cf-4de1-814c-7ab2c42c75ec",
+              "leftValue": "={{ $('Format & Classify Error').item.json.severity }}",
+              "rightValue": "Critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ae364bfc-9657-412b-aca7-24d60b675d34",
+      "name": "If Critical"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B2VUTTMBK",
+          "mode": "list",
+          "cachedResultName": "bot-errors"
+        },
+        "text": "=🚨 Critical Workflow Error\n\nWorkflow: {{ $json.fields.workflow_name }}\nNode: {{ $json.fields.node_name }}\nError: {{ $json.fields.error_message }}\nExecution ID: {{ $json.fields.execution_id }}\nSeverity: {{ $json.fields.severity }}\n\nPlease check n8n and Error_Logs for details.",
+        "otherOptions": {
+          "mrkdwn": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "774edb00-0cd9-4c0f-b9d2-8a4728691258",
+      "name": "Alert Slack Channel",
+      "webhookId": "23c95444-52f6-4c2d-993c-90d1aa916ac2",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "oxiR3di8yT7xnpfQ",
+          "name": "Telegram Agent"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        864,
+        96
+      ],
+      "id": "edb2a5e4-4be2-4596-9891-5daa072910d7",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "338",
+            "url": "https://kevyntest4.app.n8n.cloud/workflow/JSCM0rIu5pv7C6Sk/executions/338",
+            "error": {
+              "level": "warning",
+              "tags": {},
+              "description": "Bad Request: chat not found",
+              "timestamp": 1778411601447,
+              "context": {},
+              "functionality": "regular",
+              "name": "NodeApiError",
+              "node": {
+                "parameters": {
+                  "resource": "message",
+                  "operation": "sendMessage",
+                  "chatId": "12",
+                  "text": "=⚠️ Low Stock Alert  Product: {{ $json.fields.name }} Current Stock: {{ $json.fields.stock }} Threshold: {{ $json.fields.low_stock_threshold }}  Please restock soon to avoid running out. 📦",
+                  "replyMarkup": "none",
+                  "additionalFields": {}
+                },
+                "type": "n8n-nodes-base.telegram",
+                "typeVersion": 1.2,
+                "position": [
+                  -80,
+                  32
+                ],
+                "id": "a8756d0a-9549-4dbe-90cc-848d4f4d4e77",
+                "name": "Notify Admin",
+                "webhookId": "6b971650-7a97-45c6-b382-f1de64d1fb03",
+                "credentials": {
+                  "telegramApi": {
+                    "id": "5vlXN3tM4frwn6Eg",
+                    "name": "smart sales agent bot"
+                  }
+                }
+              },
+              "messages": [
+                "400 - {\"ok\":false,\"error_code\":400,\"description\":\"Bad Request: chat not found\"}"
+              ],
+              "httpCode": "400",
+              "message": "Bad request - please check your parameters",
+              "stack": "NodeApiError: Bad request - please check your parameters\n    at ExecuteContext.apiRequest (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Telegram/GenericFunctions.ts:230:9)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Telegram/Telegram.node.ts:2180:21)\n    at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+exporter-trace-otlp_6e7491b816d1cb4d881c87efce4bbda6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1048:9)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+exporter-trace-otlp_6e7491b816d1cb4d881c87efce4bbda6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1239:11)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+exporter-trace-otlp_6e7491b816d1cb4d881c87efce4bbda6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1687:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+exporter-trace-otlp_6e7491b816d1cb4d881c87efce4bbda6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2339:11"
+            },
+            "lastNodeExecuted": "Notify Admin",
+            "mode": "trigger",
+            "executionContext": {
+              "version": 1,
+              "establishedAt": 1778411600003,
+              "source": "trigger",
+              "redaction": {
+                "version": 1,
+                "policy": "none"
+              },
+              "triggerNode": {
+                "name": "Schedule Trigger: Hourly",
+                "type": "n8n-nodes-base.scheduleTrigger"
+              }
+            }
+          },
+          "workflow": {
+            "id": "JSCM0rIu5pv7C6Sk",
+            "name": "Low Stock Alert Workflow"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Format & Classify Error": [
+      {
+        "json": {
+          "workflowName": "Low Stock Alert Workflow",
+          "nodeName": "Notify Admin",
+          "errorMessage": "Bad request - please check your parameters",
+          "executionId": "338",
+          "severity": "Critical",
+          "timestamp": "2026-05-10T11:38:19.351Z"
+        }
+      }
+    ],
+    "Create a record": [
+      {
+        "json": {
+          "id": "recQoRTaYP84h5Yti",
+          "createdTime": "2026-05-10T12:38:03.000Z",
+          "fields": {
+            "workflow_name": "Low Stock Alert Workflow",
+            "node_name": "Notify Admin",
+            "error_message": "Bad request - please check your parameters",
+            "execution_id": "338",
+            "severity": "Critical",
+            "timestamp": "2026-05-10T12:38:03.000Z"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format & Classify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format & Classify Error": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "If Critical",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Critical": {
+      "main": [
+        [
+          {
+            "node": "Alert Slack Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d477b199-c09f-4a5d-a755-eaed336f4430",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "953a1f57a87c292d04865ddcf47377bcf4f3cc4b035326b7099a500d3a353f2b"
+  },
+  "id": "y8athiS8MrK5uXcs",
+  "tags": []
+}
