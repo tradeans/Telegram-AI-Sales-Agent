@@ -6,8 +6,8 @@
 ---
 
 ## 🎥 Demo
-[![Watch the Demo](https://drive.google.com/file/d/1pv3jkjl67ItTWmULAOEisZxGOuYYowza/view?usp=drive_link)]
-> *Click to watch the 3-minute walkthrough of the bot in action.*
+[🎥 Watch the 3-Minute Demo](https://drive.google.com/file/d/1pv3jkjl67ItTWmULAOEisZxGOuYYowza/view?usp=drive_link)
+> *Click to watch the walkthrough of the bot in action.*
 
 ---
 
